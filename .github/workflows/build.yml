@@ -1,17 +1,28 @@
-name: Build MasterRelayVPN
+name: Build and Release MasterRelayVPN
 
 on:
   push:
     tags:
       - "v*"
+
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (1.2.3)"
+        required: true
+      release_name:
+        description: "Release v1.2.3"
+        required: true
+      release_body:
+        description: "Release pp"
+        required: false
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup .NET
@@ -19,7 +30,7 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Restore dependencies
+      - name: Restore
         run: dotnet restore gui/MasterRelayVPN.csproj
 
       - name: Build Release
@@ -30,3 +41,24 @@ jobs:
         with:
           name: MasterRelayVPN
           path: build/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: MasterRelayVPN
+          path: build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event.inputs.release_name }}
+          body: ${{ github.event.inputs.release_body }}
+          files: build/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
