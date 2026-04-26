@@ -1,26 +1,67 @@
-  build:
+name: Build and Release MasterRelayVPN
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (v1.1.2)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: '8.0.x'
 
-      - name: Restore
+      - name: Restore dependencies
         run: dotnet restore gui/MasterRelayVPN.csproj
 
-      - name: Publish
-        run: dotnet publish gui/MasterRelayVPN.csproj -c Release -r win-x64 --self-contained true -o build
+      - name: Publish application
+        run: >
+          dotnet publish gui/MasterRelayVPN.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output build/
+          /p:PublishSingleFile=true
+          /p:IncludeNativeLibrariesForSelfExtract=true
 
-      - name: Zip
+      - name: Zip published output
         run: Compress-Archive -Path build/* -DestinationPath MasterRelayVPN.zip
+        shell: pwsh
 
-      - name: Release
+      - name: Resolve release tag
+        id: resolve_tag
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ github.event.inputs.tag }}" -ne "") {
+            $tag = "${{ github.event.inputs.tag }}"
+          } else {
+            $tag = "${{ github.ref_name }}"
+          }
+          echo "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.resolve_tag.outputs.tag }}
+          name: MasterRelayVPN ${{ steps.resolve_tag.outputs.tag }}
+          draft: false
+          prerelease: false
           files: MasterRelayVPN.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
