@@ -1,70 +1,229 @@
 # MasterRelayVPN
 
-Windows desktop GUI on top of [masterking32/MasterHttpRelayVPN](https://github.com/masterking32/MasterHttpRelayVPN). Bundles the Python relay engine and a WPF (.NET 8) frontend into a single redistributable folder.
+یک پروکسی لوکال بدون نیاز به نصب پیچیده، مناسب برای شبکه‌های محدود و اینترنت‌های فیلترشده.
 
-## Build
+---
 
-One command, from the repo root:
+## 📌 نحوه استفاده
 
-```powershell
-build\build.ps1
-```
+1. فایل `MasterRelayVPN.exe` را اجرا کنید.
+2. چند لحظه صبر کنید تا برنامه برای اولین بار تنظیمات اولیه را انجام دهد.
+3. روی دکمه **Start** کلیک کنید.
 
-Produces:
+---
 
-```
-release\
-├── MasterRelayVPN\          ready-to-ship folder
-│   ├── MasterRelayVPN.exe       (~69 MB, .NET 8 self-contained)
-│   ├── core\
-│   │   └── MasterRelayCore.exe  (~28 MB, Python embedded via PyInstaller)
-│   ├── data\
-│   │   ├── cert\
-│   │   └── logs\
-│   └── README.txt
-└── MasterRelayVPN.zip       ~91 MB
-```
+## 📁 ساختار فایل‌ها
 
-The script:
-1. Verifies `python` and `dotnet` are on PATH.
-2. Creates `_pybuild\.venv` if missing, installs pinned deps from `requirements.txt`.
-3. Stages `src\*.py` + `core\*.py` into `_pybuild\stage\`, runs PyInstaller against `build\MasterRelayCore.spec`.
-4. Runs `dotnet publish` for the WPF GUI (single-file, self-contained, win-x64).
-5. Copies both exes into `release\MasterRelayVPN\`, creates `data\cert\` and `data\logs\`.
-6. **Self-test**: invokes the bundled core to (1) generate the CA, (2) verify it persists across runs, (3) start the proxy and confirm it accepts TCP within 3 s. Aborts the build if any test fails.
-7. Zips the result into `release\MasterRelayVPN.zip`.
-
-### Flags
-
-```powershell
-build\build.ps1 -Clean       # wipe _pybuild\ and release\ first
-build\build.ps1 -SkipGui     # core only — useful for CI on non-Windows
-build\build.ps1 -NoSelfTest  # skip the post-build smoke test
-```
-
-### Prerequisites (build host only)
-
-- Windows 10 / 11, x64
-- Python 3.10–3.13 on PATH
-- .NET 8 SDK Desktop on PATH
-- Visual C++ Build Tools (only needed if PyPI doesn't have a `cryptography` wheel for your Python)
-
-End users need none of the above — both binaries in the release folder are self-contained.
-
-## Layout
+تمام فایل‌های مورد نیاز در کنار فایل اصلی قرار دارند:
 
 ```
-core\        bridge files we maintain (ca_path, stats, log_filter,
-             net_patches, gui_bridge, main_gui)
-src\         pristine upstream Python files
-gui\         C# WPF (.NET 8)
-build\       build.ps1, build.bat, clean.ps1, MasterRelayCore.spec, installer.iss
-docs\        BUILD.md, ARCHITECTURE.md, QA.md, CHECKLIST.md, RECOVERY.md
-requirements.txt
+MasterRelayVPN.exe        ← برنامه اصلی  
+core\MasterRelayCore.exe  ← هسته‌ی ریلی (به‌صورت خودکار اجرا می‌شود)  
+data\config.json          ← تنظیمات شما  
+data\cert\                ← گواهی ساخته‌شده  
+data\logs\                ← لاگ‌ها  
 ```
 
-## Troubleshooting
+🔹 برای ریست کامل برنامه، پوشه‌ی `data` را حذف کنید.
 
-See [docs/RECOVERY.md](docs/RECOVERY.md) for fixes to common build failures.
+---
 
-For the architecture diagram and IPC protocol, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+## ⚙️ تنظیمات
+
+با کلیک روی **Settings** می‌توانید:
+
+* آدرس Apps Script یا Worker خود را وارد کنید
+* مقدار SNI مناسب شبکه‌تان را تغییر دهید
+* اندازه chunk یا fragmentation را تنظیم کنید
+* گواهی (certificate) را به‌صورت دستی نصب کنید
+
+---
+
+## 🌐 تنظیم پراکسی سیستم
+
+* با زدن گزینه **Set System Proxy**، کل سیستم از پروکسی استفاده می‌کند
+* اگر دوباره روی آن بزنید و در لاگ ببینید:
+
+  ```
+  system proxy disabled
+  ```
+
+  یعنی پروکسی سیستم غیرفعال شده و فقط برنامه‌هایی که دستی تنظیم شده‌اند استفاده می‌کنند
+
+---
+
+## ⚠️ نکات مهم
+
+* اگر برنامه نتوانست certificate را نصب کند، آن را با **Run as Administrator** اجرا کنید
+* اگر خطای پورت گرفتید (مثلاً پورت در حال استفاده بود)، یک پورت دیگر وارد کنید مثل:
+
+  ```
+  8085
+  10808
+  10809
+  ```
+* برای امنیت بیشتر، از **اکانت گوگل اصلی خود استفاده نکنید** (احتمال محدود شدن وجود دارد)
+
+---
+
+## ☁️ راه‌اندازی Google Apps Script
+
+1. وارد سایت `script.google.com` شوید
+
+2. یک پروژه جدید بسازید
+
+3. تمام کدهای پیش‌فرض را حذف کنید
+
+4. محتوای فایل `Code.gs` را کپی و جایگزین کنید
+
+5. مقدار:
+
+   ```
+   "Ramz-Khoob-Shoma"
+   ```
+
+   را به یک رمز قوی‌تر تغییر دهید
+
+6. این رمز را در بخش **Auth Key** داخل تنظیمات برنامه وارد کنید
+
+7. روی **Deploy → New Deployment** کلیک کنید
+
+8. دسترسی‌ها (Authorize) را تأیید کنید
+
+9. Deployment ID را کپی کنید
+
+10. آن را در قسمت **Script ID** داخل برنامه وارد کنید
+
+---
+
+## 🔌 اطلاعات اتصال
+
+در پایین برنامه:
+
+* آدرس پروکسی و پورت نمایش داده می‌شود
+* آن را در مرورگر یا برنامه‌های دیگر استفاده کنید
+
+
+
+---
+# MasterRelayVPN — نسخه جدید (آپدیت بزرگ)
+
+این نسخه با تمرکز روی **پایداری بیشتر و کنترل بهتر اتصال** منتشر شده است.
+
+---
+
+## ✨ تغییرات اصلی
+
+### 🔁 حالت جدید: Infinite Deployment IDs
+
+در این نسخه می‌توانید چندین Deployment ID اضافه کنید.
+
+**ویژگی‌ها:**
+
+* دکمه ➕ برای اضافه کردن ID جدید
+* دکمه ➖ برای حذف هر ID
+* استفاده همزمان از چند endpoint
+* سوئیچ خودکار در صورت قطع شدن یکی از سرورها
+
+📌 نتیجه:
+
+* اتصال پایدارتر
+* کاهش قطعی‌ها
+* عملکرد روان‌تر (مخصوصاً برای یوتیوب و استریم)
+
+---
+
+### 🌐 پشتیبانی از زبان فارسی
+
+* امکان تغییر زبان از تنظیمات
+* پشتیبانی کامل از **فارسی (RTL)**
+* ذخیره شدن زبان انتخابی
+
+---
+
+### 🎨 طراحی جدید (Green Theme)
+
+* تم جدید سبز تیره با جلوه مدرن
+* پس‌زمینه جدید به صورت پیش‌فرض اضافه شده
+* بهبود کامل ظاهر دکمه‌ها و عناصر UI
+* طراحی تمیز، حرفه‌ای و چشم‌نواز
+
+---
+
+### 📡 نمایش وضعیت اتصال (هر ۱۰ ثانیه)
+
+دیگر نیازی به خواندن لاگ نیست.
+
+وضعیت اتصال به صورت خودکار نمایش داده می‌شود:
+
+* ✅ متصل
+* ⚠️ ناپایدار
+* ❌ قطع
+
+---
+
+### ⚙️ حالت‌های آماده شبکه (Smart Presets)
+
+۴ حالت جدید برای تنظیم سریع:
+
+1. 🕵️‍♂️ **Stealth Mode (اینترنت ضعیف)**
+
+   * پایداری بالا
+   * سرعت کمتر
+   * مناسب نت ملی و محدود
+
+2. ⚖️ **Balanced Mode**
+
+   * تعادل بین سرعت و پایداری
+
+3. ⚡ **High Speed Mode**
+
+   * سرعت بالا
+   * مناسب اینترنت قوی
+
+4. 🧠 **Auto Optimize**
+
+   * تنظیم خودکار بر اساس شرایط اینترنت شما
+
+---
+
+### 🚀 بهینه‌سازی عملکرد
+
+* کاهش مصرف منابع
+* افزایش سرعت اجرا
+* بهبود مدیریت اتصال‌ها
+* کاهش لگ و فریز شدن برنامه
+
+---
+
+## ⚠️ نکات مهم
+
+* حالت چند Deployment ID برای **پایداری بهتر** طراحی شده است
+  (افزایش سرعت بستگی به شرایط شبکه دارد)
+
+* اگر یک ID مشکل داشته باشد، برنامه به صورت خودکار از بقیه استفاده می‌کند
+
+---
+## ❓ سوال یا مشکل؟
+
+📢 کانال تلگرام:
+@Mattymatins
+
+👤 ارتباط مستقیم:
+@Mattymatin
+
+---
+
+## 🎯 خلاصه
+
+این برنامه یک پروکسی سبک و سریع است که با استفاده از Apps Script و تکنیک‌های خاص شبکه، امکان عبور از محدودیت‌ها را فراهم می‌کند — بدون نیاز به نصب‌های پیچیده.
+
+---
+
+## ⚠️ هشدار
+
+استفاده از این ابزار به عهده‌ی خود شماست. از اطلاعات حساس و اکانت‌های مهم استفاده نکنید.
+
+---
+
+موفق باشید 🚀
