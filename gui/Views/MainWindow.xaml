@@ -359,7 +359,9 @@
                                                     Padding="0" Width="30" Height="30" Margin="6,0,0,0"
                                                     Command="{Binding DataContext.RemoveDeploymentCmd,
                                                               RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    CommandParameter="{Binding}"/>
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="{Binding DataContext.Loc[remove_deployment], RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    AutomationProperties.Name="{Binding DataContext.Loc[remove_deployment], RelativeSource={RelativeSource AncestorType=Window}}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

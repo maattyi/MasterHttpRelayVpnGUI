@@ -1,0 +1,3 @@
+## 2024-05-01 - Add Screen Reader Support to Dynamic List Buttons
+**Learning:** In WPF (XAML) apps like this one, icon-only buttons inside `ItemsControl` (like dynamic lists of deployment IDs) often lack context for screen readers. Using `AutomationProperties.Name` is the standard a11y approach here, equivalent to `aria-label` in web dev.
+**Action:** Always check dynamically generated lists for icon-only action buttons (e.g., delete/remove `-` buttons) and ensure they have `ToolTip` and `AutomationProperties.Name` bound to localized strings.
