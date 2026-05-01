@@ -364,9 +364,8 @@ class ProxyServer:
 
         # Step 2: open outgoing TLS to target IP with the safe SNI
         ssl_ctx_client = ssl.create_default_context()
-        if not self.fronter.verify_ssl:
-            ssl_ctx_client.check_hostname = False
-            ssl_ctx_client.verify_mode = ssl.CERT_NONE
+        # Advertise HTTP/1.1 to the remote proxy server
+        ssl_ctx_client.set_alpn_protocols(["http/1.1"])
         try:
             r_out, w_out = await asyncio.wait_for(
                 asyncio.open_connection(
