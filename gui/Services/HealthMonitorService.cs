@@ -42,13 +42,13 @@ public sealed class HealthMonitorService : IDisposable
                     }
 
                     Checked?.Invoke(result);
-                    await Task.Delay(TimeSpan.FromSeconds(10), ct);
+                    await Task.Delay(TimeSpan.FromSeconds(60), ct);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception ex)
                 {
                     Checked?.Invoke(new HealthCheckResult(false, 0, DateTime.Now, ex.Message));
-                    try { await Task.Delay(TimeSpan.FromSeconds(10), ct); }
+                    try { await Task.Delay(TimeSpan.FromSeconds(60), ct); }
                     catch (OperationCanceledException) { }
                 }
             }
