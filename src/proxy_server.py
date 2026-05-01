@@ -642,10 +642,7 @@ class ProxyServer:
             ".pdf", ".doc", ".docx", ".ppt", ".pptx",
             ".wasm",
         }
-        for ext in large_exts:
-            if path.endswith(ext):
-                return True
-        return False
+        return path.endswith(tuple(large_exts))
 
     # ── Plain HTTP forwarding ─────────────────────────────────────
 
