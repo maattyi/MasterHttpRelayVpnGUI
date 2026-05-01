@@ -32,6 +32,12 @@ from ws import ws_encode, ws_decode
 
 log = logging.getLogger("Fronter")
 
+# Pre-compiled regexes for performance
+RE_CONTENT_RANGE = re.compile(r"/(\d+)")
+RE_JSON_EXTRACT = re.compile(r'\{.*\}', re.DOTALL)
+RE_STATUS_CODE = re.compile(r"\d{3}")
+RE_COOKIE_SPLIT = re.compile(r",\s*(?=[A-Za-z0-9!#$%&'*+\-.^_`|~]+=)")
+
 
 class DomainFronter:
     def __init__(self, config: dict):
@@ -590,7 +596,7 @@ class DomainFronter:
 
         # Parse total size from Content-Range: "bytes 0-262143/1048576"
         content_range = resp_hdrs.get("content-range", "")
-        m = re.search(r"/(\d+)", content_range)
+        m = RE_CONTENT_RANGE.search(content_range)
         if not m:
             # Can't parse — downgrade to 200 so the client (which sent a
             # plain GET) doesn't get confused by 206 + Content-Range.
@@ -1012,7 +1018,7 @@ class DomainFronter:
         try:
             data = json.loads(text)
         except json.JSONDecodeError:
-            m = re.search(r'\{.*\}', text, re.DOTALL)
+            m = RE_JSON_EXTRACT.search(text)
             data = json.loads(m.group()) if m else None
         if not data:
             raise RuntimeError(f"Bad batch response: {text[:200]}")
@@ -1049,7 +1055,7 @@ class DomainFronter:
         lines = header_section.split(b"\r\n")
 
         status_line = lines[0].decode(errors="replace")
-        m = re.search(r"\d{3}", status_line)
+        m = RE_STATUS_CODE.search(status_line)
         status = int(m.group()) if m else 0
 
         headers = {}
@@ -1139,7 +1145,7 @@ class DomainFronter:
         try:
             data = json.loads(text)
         except json.JSONDecodeError:
-            m = re.search(r'\{.*\}', text, re.DOTALL)
+            m = RE_JSON_EXTRACT.search(text)
             if m:
                 try:
                     data = json.loads(m.group())
@@ -1201,7 +1207,7 @@ class DomainFronter:
             return []
         # Split on ", " but only when the following text looks like the start
         # of a new cookie (a token followed by '=').
-        parts = re.split(r",\s*(?=[A-Za-z0-9!#$%&'*+\-.^_`|~]+=)", blob)
+        parts = RE_COOKIE_SPLIT.split(blob)
         return [p.strip() for p in parts if p.strip()]
 
     def _split_raw_response(self, raw: bytes):
@@ -1210,7 +1216,7 @@ class DomainFronter:
             return 0, {}, raw
         header_section, body = raw.split(b"\r\n\r\n", 1)
         lines = header_section.split(b"\r\n")
-        m = re.search(r"\d{3}", lines[0].decode(errors="replace"))
+        m = RE_STATUS_CODE.search(lines[0].decode(errors="replace"))
         status = int(m.group()) if m else 0
         headers = {}
         for line in lines[1:]:
