@@ -60,11 +60,9 @@ class H2Transport:
       - Configurable max concurrency
     """
 
-    def __init__(self, connect_host: str, sni_host: str,
-                 verify_ssl: bool = True):
+    def __init__(self, connect_host: str, sni_host: str):
         self.connect_host = connect_host
         self.sni_host = sni_host
-        self.verify_ssl = verify_ssl
 
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
@@ -102,9 +100,6 @@ class H2Transport:
         ctx = ssl.create_default_context()
         # Advertise both h2 and http/1.1 — some DPI blocks h2-only ALPN
         ctx.set_alpn_protocols(["h2", "http/1.1"])
-        if not self.verify_ssl:
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
 
         # Create raw TCP socket with TCP_NODELAY BEFORE TLS handshake.
         # Nagle's algorithm can delay small writes (H2 frames) by up to 200ms
