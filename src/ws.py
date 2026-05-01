@@ -7,6 +7,7 @@ Client-to-server frames are always masked as required by the spec.
 
 import os
 import struct
+import sys
 
 
 def ws_encode(data: bytes, opcode: int = 0x02) -> bytes:
@@ -26,11 +27,18 @@ def ws_encode(data: bytes, opcode: int = 0x02) -> bytes:
     mask = os.urandom(4)
     head += mask
 
-    masked = bytearray(data)
-    for i in range(len(masked)):
-        masked[i] ^= mask[i & 3]
+    if not data:
+        return bytes(head)
 
-    return bytes(head) + bytes(masked)
+    length = len(data)
+    repeats = (length + 3) // 4
+    full_mask = (mask * repeats)[:length]
+
+    data_int = int.from_bytes(data, sys.byteorder)
+    mask_int = int.from_bytes(full_mask, sys.byteorder)
+    masked = (data_int ^ mask_int).to_bytes(length, sys.byteorder)
+
+    return bytes(head) + masked
 
 
 def ws_decode(buf: bytes):
@@ -68,9 +76,15 @@ def ws_decode(buf: bytes):
     if len(buf) < pos + length:
         return None
 
-    payload = bytearray(buf[pos : pos + length])
-    if mask:
-        for i in range(len(payload)):
-            payload[i] ^= mask[i & 3]
+    payload = buf[pos : pos + length]
+    if mask and payload:
+        repeats = (length + 3) // 4
+        full_mask = (mask * repeats)[:length]
 
-    return opcode, bytes(payload), pos + length
+        payload_int = int.from_bytes(payload, sys.byteorder)
+        mask_int = int.from_bytes(full_mask, sys.byteorder)
+        payload = (payload_int ^ mask_int).to_bytes(length, sys.byteorder)
+    else:
+        payload = bytes(payload)
+
+    return opcode, payload, pos + length
