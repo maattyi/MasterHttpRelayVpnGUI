@@ -19,6 +19,10 @@ from domain_fronter import DomainFronter
 
 log = logging.getLogger("Proxy")
 
+# Pre-compiled regexes for performance
+RE_MAX_AGE = re.compile(r"max-age=(\d+)")
+RE_CONTENT_TYPE = re.compile(r"content-type:\s*([^\r\n]+)")
+
 
 class ResponseCache:
     """Simple LRU response cache — avoids repeated relay calls."""
@@ -73,7 +77,7 @@ class ResponseCache:
             return 0
 
         # Explicit max-age
-        m = re.search(r"max-age=(\d+)", hdr)
+        m = RE_MAX_AGE.search(hdr)
         if m:
             return min(int(m.group(1)), 86400)
 
@@ -88,7 +92,7 @@ class ResponseCache:
             if path.endswith(ext):
                 return 3600  # 1 hour for static assets
 
-        ct_m = re.search(r"content-type:\s*([^\r\n]+)", hdr)
+        ct_m = RE_CONTENT_TYPE.search(hdr)
         ct = ct_m.group(1) if ct_m else ""
         if "image/" in ct or "font/" in ct:
             return 3600
