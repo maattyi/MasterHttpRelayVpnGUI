@@ -65,6 +65,10 @@ class DomainFronter:
         self.worker_path = config.get("worker_path", "")
         self.auth_key = config.get("auth_key", "")
         self.verify_ssl = config.get("verify_ssl", True)
+        if not self.verify_ssl:
+            log.warning("SECURITY WARNING: verify_ssl is set to False. "
+                        "Enforcing SSL verification for security.")
+            self.verify_ssl = True
 
         # Connection pool — TTL-based, pre-warmed, with concurrency control
         self._pool: list[tuple[asyncio.StreamReader, asyncio.StreamWriter, float]] = []
@@ -106,11 +110,7 @@ class DomainFronter:
     # ── helpers ───────────────────────────────────────────────────
 
     def _ssl_ctx(self) -> ssl.SSLContext:
-        ctx = ssl.create_default_context()
-        if not self.verify_ssl:
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-        return ctx
+        return ssl.create_default_context()
 
     async def _open(self):
         """Open a TLS connection to the CDN.
