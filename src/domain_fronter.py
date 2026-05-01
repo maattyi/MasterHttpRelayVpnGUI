@@ -64,7 +64,6 @@ class DomainFronter:
         self.mode = mode
         self.worker_path = config.get("worker_path", "")
         self.auth_key = config.get("auth_key", "")
-        self.verify_ssl = config.get("verify_ssl", True)
 
         # Connection pool — TTL-based, pre-warmed, with concurrency control
         self._pool: list[tuple[asyncio.StreamReader, asyncio.StreamWriter, float]] = []
@@ -96,7 +95,7 @@ class DomainFronter:
                 from h2_transport import H2Transport, H2_AVAILABLE
                 if H2_AVAILABLE:
                     self._h2 = H2Transport(
-                        self.connect_host, self.sni_host, self.verify_ssl
+                        self.connect_host, self.sni_host
                     )
                     log.info("HTTP/2 multiplexing available — "
                              "all requests will share one connection")
@@ -107,9 +106,6 @@ class DomainFronter:
 
     def _ssl_ctx(self) -> ssl.SSLContext:
         ctx = ssl.create_default_context()
-        if not self.verify_ssl:
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
         return ctx
 
     async def _open(self):
